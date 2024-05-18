@@ -15,7 +15,9 @@ const JWT_ALGORITHM: Algorithm = Algorithm::HS512;
 /// Represents the claims associated with a user JWT.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserClaims {
-    pub pid: String,
+    pub identity: String,
+    nbf: usize,
+    iat: usize,
     exp: usize,
 }
 
@@ -62,11 +64,12 @@ impl JWT {
     ///
     /// auth::jwt::JWT::new("PqRwLF2rhHe8J22oBeHy").generate_token(&604800, "PID".to_string());
     /// ```
-    pub fn generate_token(&self, expiration: &u64, pid: String) -> JWTResult<String> {
+    pub fn generate_token(&self, expiration: &u64, identity: String) -> JWTResult<String> {
         #[allow(clippy::cast_possible_truncation)]
         let exp = (get_current_timestamp() + expiration) as usize;
-
-        let claims = UserClaims { pid, exp };
+        let nbf = get_current_timestamp() as usize;
+        let iat = nbf.clone();
+        let claims = UserClaims { identity, exp, nbf, iat };
 
         let token = encode(
             &Header::new(self.algorithm),
@@ -91,13 +94,30 @@ impl JWT {
     /// auth::jwt::JWT::new("PqRwLF2rhHe8J22oBeHy").validate("JWT-TOKEN");
     /// ```
     pub fn validate(&self, token: &str) -> JWTResult<TokenData<UserClaims>> {
-        let mut validate = Validation::new(self.algorithm);
-        validate.leeway = 0;
-
         decode::<UserClaims>(
             token,
             &DecodingKey::from_base64_secret(&self.secret)?,
-            &validate,
+            &Validation::new(self.algorithm),
+        )
+    }
+
+    pub fn validate_pem(&self, token: &str, pem: &[u8]) -> JWTResult<TokenData<UserClaims>> {
+        decode::<UserClaims>(
+            token,
+            &DecodingKey::from_rsa_pem(pem)?,
+            &Validation::new(self.algorithm),
+        )
+    }
+
+    pub fn parse_unverified(&self, token: &str) -> JWTResult<TokenData<UserClaims>> {
+        let mut insecure_validation = Validation::new(self.algorithm);
+        insecure_validation.insecure_disable_signature_validation();
+        insecure_validation.leeway = 30;
+        insecure_validation.validate_nbf = true;
+        decode::<UserClaims>(
+            token,
+            &DecodingKey::from_secret(&"no_secrete".as_bytes()),
+            &insecure_validation
         )
     }
 }

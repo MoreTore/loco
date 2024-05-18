@@ -17,7 +17,7 @@ pub use sea_orm::{
 #[cfg(all(feature = "auth_jwt", feature = "with-db"))]
 pub use crate::controller::middleware::auth;
 #[cfg(feature = "with-db")]
-pub use crate::model::{query, Authenticable, ModelError, ModelResult};
+pub use crate::model::{query, Authenticable, ModelError, ModelResult, AuthenticateDevice};
 pub use crate::{
     app::{AppContext, Initializer},
     controller::{
