@@ -44,3 +44,8 @@ pub trait Authenticable: Clone {
     async fn find_by_api_key(db: &DatabaseConnection, api_key: &str) -> ModelResult<Self>;
     async fn find_by_claims_key(db: &DatabaseConnection, claims_key: &str) -> ModelResult<Self>;
 }
+
+#[async_trait]
+pub trait AuthenticateDevice: Clone {
+    async fn get_pem_from_identity(db: &DatabaseConnection, identity: &str) -> ModelResult<String>;
+}

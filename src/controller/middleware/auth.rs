@@ -30,7 +30,7 @@ use axum_extra::extract::cookie;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    app::AppContext, auth, config::JWT as JWTConfig, errors::Error, model::Authenticable,
+    app::AppContext, auth, config::JWT as JWTConfig, errors::Error, model::Authenticable, model::AuthenticateDevice,
     Result as LocoResult,
 };
 
@@ -41,7 +41,7 @@ use crate::{
 // ---------------------------------------
 
 // Define constants for token prefix and authorization header
-const TOKEN_PREFIX: &str = "Bearer ";
+const TOKEN_PREFIX: &str = "JWT ";
 const AUTH_HEADER: &str = "authorization";
 
 // Define a struct to represent user authentication information serialized
@@ -71,7 +71,7 @@ where
 
         match auth::jwt::JWT::new(&jwt_secret.secret).validate(&token) {
             Ok(claims) => {
-                let user = T::find_by_claims_key(&ctx.db, &claims.claims.pid)
+                let user = T::find_by_claims_key(&ctx.db, &claims.claims.identity)
                     .await
                     .map_err(|_| Error::Unauthorized("token is not valid".to_string()))?;
                 Ok(Self {
@@ -99,6 +99,7 @@ impl<S> FromRequestParts<S> for JWT
 where
     AppContext: FromRef<S>,
     S: Send + Sync,
+    //T: AuthenticateDevice,
 {
     type Rejection = Error;
 
@@ -117,8 +118,10 @@ where
                 return Err(Error::Unauthorized("token is not valid".to_string()));
             }
         }
+
     }
 }
+
 
 /// extract JWT token from context configuration
 ///
